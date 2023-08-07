@@ -23,7 +23,7 @@ public class KioskService {
 
     // 방문 확인
     @Transactional
-    public Arrive confirmArrive(ArriveParam param) throws CustomException {
+    public Arrive confirmArrive(ArriveParam param) {
         StoreEntity storeEntity = storeRepository.findById(param.getStoreId())
                 .orElseThrow(()->new CustomException(ErrorCode.STORE_NOT_EXIST));
         BookingEntity bookingEntity = bookingRepository
@@ -44,10 +44,10 @@ public class KioskService {
      */
     private void validateConfirmArrive(BookingState state, LocalDateTime bookingDateTime) {
         if (state != BookingState.ACCEPTED) {
-            throw new RuntimeException();
+            throw new CustomException(ErrorCode.BOOKING_NOT_EXIST);
         }
         if (LocalDateTime.now().isAfter(bookingDateTime.minusMinutes(10))) {
-            throw new RuntimeException();
+            throw new CustomException(ErrorCode.LATE_ARRIVE);
         }
     }
 

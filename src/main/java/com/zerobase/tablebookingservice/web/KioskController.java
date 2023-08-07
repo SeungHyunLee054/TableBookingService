@@ -1,6 +1,5 @@
 package com.zerobase.tablebookingservice.web;
 
-import com.zerobase.tablebookingservice.exception.CustomException;
 import com.zerobase.tablebookingservice.model.ArriveParam;
 import com.zerobase.tablebookingservice.service.KioskService;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +17,7 @@ public class KioskController {
      * 방문 확인
      */
     @PutMapping("/kiosk/arrive")
-    public ResponseEntity<?> confirmArrival(@RequestBody ArriveParam param) throws CustomException {
+    public ResponseEntity<?> confirmArrival(@RequestBody ArriveParam param) {
         return ResponseEntity.ok(kioskService.confirmArrive(param));
     }
 }

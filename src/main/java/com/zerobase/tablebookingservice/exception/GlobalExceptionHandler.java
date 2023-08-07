@@ -12,6 +12,8 @@ import static com.zerobase.tablebookingservice.model.constants.ErrorCode.INVALID
 public class GlobalExceptionHandler {
     @ExceptionHandler(CustomException.class)
     public ErrorResponse handleCustomException(CustomException e) {
+        log.error("{} is occurred", e.getErrorCode());
+
         return new ErrorResponse(e.getErrorCode(), e.getErrorMessage());
     }
 

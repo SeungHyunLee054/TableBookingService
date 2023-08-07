@@ -1,5 +1,6 @@
 package com.zerobase.tablebookingservice.service;
 
+import com.zerobase.tablebookingservice.exception.CustomException;
 import com.zerobase.tablebookingservice.model.*;
 import com.zerobase.tablebookingservice.model.constants.BookingState;
 import com.zerobase.tablebookingservice.model.constants.UserType;
@@ -25,6 +26,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.zerobase.tablebookingservice.model.constants.ErrorCode.*;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -37,21 +40,21 @@ public class UserService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         return this.userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException());
+                .orElseThrow(() -> new CustomException(ACCOUNT_NOT_EXIST));
     }
 
     /**
      * 회원가입
      */
-    public User signup(EmailPassParam emailPassEnter) {
+    public User signup(EmailPassParam param) {
         log.info("회원가입 유효성 검사");
-        validateSignUpUser(emailPassEnter.getEmail());
+        validateSignUpUser(param.getEmail());
 
         return User.fromEntity(
                 userRepository.save(
                         UserEntity.builder()
-                                .email(emailPassEnter.getEmail())
-                                .password(emailPassEnter.getPassword())
+                                .email(param.getEmail())
+                                .password(encodePassword(param.getPassword()))
                                 .role(UserType.ROLE_USER)
                                 .activated(true)
                                 .build()
@@ -65,7 +68,7 @@ public class UserService implements UserDetailsService {
     public User signin(EmailPassParam emailPassEnter) {
         UserEntity userEntity = userRepository
                 .findByEmail(emailPassEnter.getEmail())
-                .orElseThrow(() -> new RuntimeException());
+                .orElseThrow(() -> new CustomException(ACCOUNT_NOT_EXIST));
 
         log.info("로그인 유효성 검사");
         validateSignInUser(emailPassEnter, userEntity);
@@ -104,8 +107,8 @@ public class UserService implements UserDetailsService {
         Pageable pageable = PageRequest.of(page, 10);
         List<Store> stores = storeRepository.findAll().stream()
                 .map(Store::fromEntity)
+                .sorted(Comparator.comparing(Store::getName))
                 .collect(Collectors.toList());
-        stores.sort(Comparator.comparing(Store::getName));
 
         return new PageImpl<>(stores, pageable, stores.size());
     }
@@ -117,8 +120,8 @@ public class UserService implements UserDetailsService {
         Pageable pageable = PageRequest.of(page, 10);
         List<Store> stores = storeRepository.findAll().stream()
                 .map(Store::fromEntity)
+                .sorted((x, y) -> y.getStars().compareTo(x.getStars()))
                 .collect(Collectors.toList());
-        stores.sort((x, y) -> y.getStars().compareTo(x.getStars()));
 
         return new PageImpl<>(stores, pageable, stores.size());
     }
@@ -128,7 +131,7 @@ public class UserService implements UserDetailsService {
      */
     public Booking bookingStore(UserEntity userEntity, long storeId, BookingParam bookingParam) {
         StoreEntity storeEntity = storeRepository.findById(storeId)
-                .orElseThrow(() -> new RuntimeException());
+                .orElseThrow(() -> new CustomException(STORE_NOT_EXIST));
 
         validateBookingStore(userEntity, storeEntity, bookingParam);
 
@@ -150,7 +153,7 @@ public class UserService implements UserDetailsService {
      */
     public Booking searchBooking(UserEntity userEntity, long bookingId) {
         BookingEntity bookingEntity = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException());
+                .orElseThrow(() -> new CustomException(BOOKING_NOT_EXIST));
 
         validateBookingOwner(userEntity, bookingEntity);
 
@@ -162,7 +165,7 @@ public class UserService implements UserDetailsService {
      */
     public Booking cancelBooking(UserEntity userEntity, long bookingId) {
         BookingEntity bookingEntity = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException());
+                .orElseThrow(() -> new CustomException(BOOKING_NOT_EXIST));
 
         validateBookingOwner(userEntity, bookingEntity);
 
@@ -176,7 +179,7 @@ public class UserService implements UserDetailsService {
      */
     public Review writeReview(UserEntity userEntity, long bookingId, ReviewParam reviewParam) {
         BookingEntity bookingEntity = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException());
+                .orElseThrow(() -> new CustomException(BOOKING_NOT_EXIST));
 
         validateWriteReview(userEntity, bookingEntity, reviewParam.getStars());
 
@@ -188,19 +191,19 @@ public class UserService implements UserDetailsService {
 
     private void validateWriteReview(UserEntity userEntity, BookingEntity bookingEntity, int stars) {
         if (userEntity.getId() != bookingEntity.getUserEntity().getId()) {
-            throw new RuntimeException();
+            throw new CustomException(BOOKING_OWNER_UNMATCH);
         }
         if (!bookingEntity.isVisitedYn()) {
-            throw new RuntimeException();
+            throw new CustomException(UNVISITED_RESERVATION);
         }
         if (stars < 1 || stars > 5) {
-            throw new RuntimeException();
+            throw new CustomException(STARS_MUST_BETWEEN_1_TO_5);
         }
     }
 
     private void validateBookingOwner(UserEntity userEntity, BookingEntity bookingEntity) {
         if (userEntity.getId() != bookingEntity.getUserEntity().getId()) {
-            throw new RuntimeException();
+            throw new CustomException(BOOKING_OWNER_UNMATCH);
         }
     }
 
@@ -209,28 +212,36 @@ public class UserService implements UserDetailsService {
                 .countByUserEntityAndStoreAndBookingDateTime(
                         userEntity, storeEntity,
                         bookingParam.getBookingDateTime()) > 0) {
-            throw new RuntimeException();
+            throw new CustomException(DUPLICATED_RESERVATION);
         }
     }
 
     private void validateDeleteUser(UserEntity userEntity) {
         if (bookingRepository.countByUserEntity(userEntity) > 0) {
-            throw new RuntimeException();
+            throw new CustomException(ACCOUNT_BOOKING_EXISTS);
         }
     }
 
     private void validateSignInUser(EmailPassParam emailPassEnter, UserEntity userEntity) {
         if (!passwordEncoder.matches(emailPassEnter.getPassword(), userEntity.getPassword())) {
-            throw new RuntimeException();
+            throw new CustomException(PASSWORD_IS_INCORRECT);
         }
         if (!userEntity.isActivated()) {
-            throw new RuntimeException();
+            throw new CustomException(UNACTIVATED_ACCOUNT);
         }
+    }
+
+    private String encodePassword(String password) {
+        if (password == null || password.length() < 1) {
+            throw new CustomException(PASSWORD_CANNOT_BE_NULL);
+        }
+
+        return passwordEncoder.encode(password);
     }
 
     private void validateSignUpUser(String email) {
         if (userRepository.existsByEmail(email)) {
-            throw new RuntimeException();
+            throw new CustomException(EMAIL_ALREADY_REGISTERED);
         }
     }
 }

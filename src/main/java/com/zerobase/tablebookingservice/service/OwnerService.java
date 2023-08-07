@@ -1,5 +1,6 @@
 package com.zerobase.tablebookingservice.service;
 
+import com.zerobase.tablebookingservice.exception.CustomException;
 import com.zerobase.tablebookingservice.model.*;
 import com.zerobase.tablebookingservice.model.constants.BookingState;
 import com.zerobase.tablebookingservice.model.constants.UserType;
@@ -21,6 +22,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.zerobase.tablebookingservice.model.constants.ErrorCode.*;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -34,7 +37,7 @@ public class OwnerService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return this.userRepository.findByEmail(username)
-                .orElseThrow(() -> new RuntimeException());
+                .orElseThrow(() -> new CustomException(ACCOUNT_NOT_EXIST));
     }
 
     /**
@@ -59,7 +62,7 @@ public class OwnerService implements UserDetailsService {
      */
     public User signin(EmailPassParam param) {
         UserEntity userEntity = userRepository.findByEmail(param.getEmail())
-                .orElseThrow(() -> new RuntimeException());
+                .orElseThrow(() -> new CustomException(ACCOUNT_NOT_EXIST));
 
         validateSignin(userEntity, param.getPassword());
 
@@ -99,7 +102,7 @@ public class OwnerService implements UserDetailsService {
      */
     public Store editStoreInfo(UserEntity userEntity, Long storeId, StoreParam param) {
         StoreEntity storeEntity = storeRepository.findById(storeId)
-                .orElseThrow(() -> new RuntimeException());
+                .orElseThrow(() -> new CustomException(STORE_NOT_EXIST));
 
         validateStoreOwner(userEntity, storeEntity);
 
@@ -116,7 +119,7 @@ public class OwnerService implements UserDetailsService {
      */
     public void deleteStore(UserEntity userEntity, Long storeId) {
         StoreEntity storeEntity = storeRepository.findById(storeId)
-                .orElseThrow(() -> new RuntimeException());
+                .orElseThrow(() -> new CustomException(STORE_NOT_EXIST));
 
         validateStoreOwner(userEntity, storeEntity);
 
@@ -141,7 +144,7 @@ public class OwnerService implements UserDetailsService {
      */
     public Booking confirmBooking(UserEntity userEntity, Long reservationId, BookingState state) {
         BookingEntity bookingEntity = bookingRepository.findById(reservationId)
-                .orElseThrow(() -> new RuntimeException());
+                .orElseThrow(() -> new CustomException(BOOKING_NOT_EXIST));
         validateBookingStoreOwner(userEntity, bookingEntity);
         bookingEntity.setBookingState(state);
 
@@ -150,7 +153,7 @@ public class OwnerService implements UserDetailsService {
 
     private void validateSignup(String email) {
         if (userRepository.existsByEmail(email)) {
-            throw new RuntimeException();
+            throw new CustomException(EMAIL_ALREADY_REGISTERED);
         }
     }
 
@@ -167,34 +170,34 @@ public class OwnerService implements UserDetailsService {
 
     private void validateSignin(UserEntity userEntity, String password) {
         if (!passwordEncoder.matches(password, userEntity.getPassword())) {
-            throw new RuntimeException();
+            throw new CustomException(PASSWORD_IS_INCORRECT);
         }
         if (!userEntity.isActivated()) {
-            throw new RuntimeException();
+            throw new CustomException(UNACTIVATED_ACCOUNT);
         }
     }
 
     private void validateDeleteOwner(UserEntity userEntity) {
         if (storeRepository.countByUserEntity(userEntity) > 0) {
-            throw new RuntimeException();
+            throw new CustomException(ACCOUNT_BOOKING_EXISTS);
         }
     }
 
     private void validateAddStore(String name, String address) {
         if (storeRepository.existsByNameAndAddress(name, address)) {
-            throw new RuntimeException();
+            throw new CustomException(STORE_ALREADY_ADDED);
         }
     }
 
     private void validateStoreOwner(UserEntity userEntity, StoreEntity storeEntity) {
         if (storeEntity.getUserEntity().getId() != userEntity.getId()) {
-            throw new RuntimeException();
+            throw new CustomException(STORE_OWNER_UNMATCH);
         }
     }
 
     private void validateBookingStoreOwner(UserEntity userEntity, BookingEntity bookingEntity) {
         if (bookingEntity.getStore().getUserEntity().getId() != userEntity.getId()) {
-            throw new RuntimeException();
+            throw new CustomException(BOOKING_STORE_OWNER_UNMATCH);
         }
     }
 }

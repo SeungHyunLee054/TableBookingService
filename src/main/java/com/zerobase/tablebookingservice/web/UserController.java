@@ -6,7 +6,7 @@ import com.zerobase.tablebookingservice.model.ReviewParam;
 import com.zerobase.tablebookingservice.model.User;
 import com.zerobase.tablebookingservice.persist.entity.UserEntity;
 import com.zerobase.tablebookingservice.security.TokenProvider;
-import com.zerobase.tablebookingservice.service.UserService;
+import com.zerobase.tablebookingservice.service.UserServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/user")
 @RequiredArgsConstructor
 public class UserController {
-    private final UserService userService;
+    private final UserServiceImpl userService;
     private final TokenProvider tokenProvider;
 
     /**

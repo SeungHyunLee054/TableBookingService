@@ -18,11 +18,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @EntityListeners(AuditingEntityListener.class)
-public class BookingEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
-
+public class BookingEntity extends BaseEntity {
     @ManyToOne
     private StoreEntity store;
 

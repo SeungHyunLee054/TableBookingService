@@ -6,7 +6,7 @@ import com.zerobase.tablebookingservice.model.User;
 import com.zerobase.tablebookingservice.model.constants.BookingState;
 import com.zerobase.tablebookingservice.persist.entity.UserEntity;
 import com.zerobase.tablebookingservice.security.TokenProvider;
-import com.zerobase.tablebookingservice.service.OwnerService;
+import com.zerobase.tablebookingservice.service.OwnerServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/owner")
 @RequiredArgsConstructor
 public class OwnerController {
-    private final OwnerService ownerService;
+    private final OwnerServiceImpl ownerService;
     private final TokenProvider tokenProvider;
 
     /**

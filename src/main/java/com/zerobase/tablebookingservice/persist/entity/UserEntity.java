@@ -21,16 +21,12 @@ import java.util.Collection;
 @NoArgsConstructor
 @Builder
 @EntityListeners(AuditingEntityListener.class)
-public class UserEntity implements UserDetails {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
-
+public class UserEntity extends BaseEntity implements UserDetails {
     @Column(unique = true)
     private String email;
 
     @JsonIgnore
-    private  String password;
+    private String password;
 
     @Enumerated(EnumType.STRING)
     private UserType role;
@@ -46,7 +42,7 @@ public class UserEntity implements UserDetails {
     @Override
     @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        Collection<GrantedAuthority> collection=new ArrayList<>();
+        Collection<GrantedAuthority> collection = new ArrayList<>();
         collection.add((GrantedAuthority) () -> role.toString());
 
         return collection;
